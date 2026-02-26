@@ -178,6 +178,13 @@
       justify-content: flex-end;
     }
 
+    #rollIndicator {
+      min-height: 20px;
+      text-align: center;
+      font-weight: 700;
+      color: #ffd166;
+    }
+
     .player-card {
       display: grid;
       gap: 8px;
@@ -225,7 +232,18 @@
       gap: 10px;
     }
 
-    .actions .btn { font-weight: 700; }
+    .actions .btn {
+      font-weight: 700;
+      display: grid;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .action-sub {
+      font-weight: 400;
+      font-size: 0.9rem;
+      color: #cfe3f5;
+    }
 
     .actions .btn.small { font-size: 0.95rem; }
 
@@ -733,10 +751,23 @@
             <div class="badge" id="turnCounter">Turno 1</div>
           </div>
           <div class="actions" id="actionButtons">
-            <button class="btn" data-action="soft">1 · Suave</button>
-            <button class="btn" data-action="strong">2 · Fuerte</button>
-            <button class="btn" data-action="sprint">3 · Sprint</button>
+            <button class="btn" data-action="soft">
+              <span>Suave</span>
+              <span class="action-sub">Avance: +1 largo</span>
+              <span class="action-sub">Energía: 0</span>
+            </button>
+            <button class="btn" data-action="strong">
+              <span>Fuerte</span>
+              <span class="action-sub">Avance: +2 largos</span>
+              <span class="action-sub">Energía: -1</span>
+            </button>
+            <button class="btn" data-action="sprint">
+              <span>Sprint</span>
+              <span class="action-sub">Avance: +2–4 largos</span>
+              <span class="action-sub">Energía: -2</span>
+            </button>
           </div>
+          <div class="muted" id="rollIndicator"></div>
         </div>
         <div class="panel">
           <div class="row space">
@@ -826,7 +857,7 @@
         <button class="btn ghost" id="closeHelp">Esc</button>
       </div>
       <div class="help">
-        Elige acción para avanzar. El turno avanza automáticamente tras un breve resumen. Todos los jugadores están en la misma pista azul. En virajes verás MAX 1/2/3 (dificultad); Sprint = curva más difícil. El Sprint puede activar trivia. Cruzar un viraje abre mini-juego; acertar suma +1 largo, fallar resta -1. Gana quien llegue primero a la meta.
+        Elige acción para avanzar. El turno avanza automáticamente tras un breve resumen. Todos los jugadores están en la misma pista azul. En virajes verás MAX 1/2/3 (dificultad); Sprint = curva más difícil y su avance es aleatorio (2–4). El Sprint puede activar trivia. Cruzar un viraje abre mini-juego; acertar suma +1 largo, fallar resta -1. Gana quien llegue primero a la meta.
       </div>
     </div>
   </div>
@@ -839,7 +870,7 @@
       </div>
       <div class="tag">5 pasos para empezar</div>
       <ol class="tutorial-steps">
-        <li>Elige una acción: Suave (+1), Fuerte (+2), Sprint (+3).</li>
+        <li>Elige una acción: Suave (+1), Fuerte (+2), Sprint (2–4 aleatorio).</li>
         <li>Tras la acción verás un resumen y el turno avanza automáticamente.</li>
         <li>La energía baja con Fuerte y Sprint. Si llega a 0, quedas bloqueado (solo Suave).</li>
         <li>Todos comparten la misma pista. Los virajes están marcados (borde azul); el próximo viraje del turno actual se resalta en amarillo.</li>
@@ -879,6 +910,8 @@
       turnSummaryLines: [],
       turnSummaryTimer: null,
       turnSummaryPlayer: null,
+      sprintRollTimer: null,
+      sprintRollCountdown: null,
       turnNumber: 1,
       records: {},
       history: []
@@ -949,6 +982,7 @@
       turnList: document.getElementById('turnList'),
       actionButtons: document.getElementById('actionButtons'),
       actionPanel: document.getElementById('actionPanel'),
+      rollIndicator: document.getElementById('rollIndicator'),
       blockedHint: document.getElementById('blockedHint'),
       turnCounter: document.getElementById('turnCounter'),
       log: document.getElementById('log'),
@@ -1140,6 +1174,11 @@
       state.turnSummaryLines = [];
       state.turnSummaryPlayer = null;
       state.activeTurnLap = null;
+      clearInterval(state.sprintRollTimer);
+      state.sprintRollTimer = null;
+      clearTimeout(state.sprintRollCountdown);
+      state.sprintRollCountdown = null;
+      dom.rollIndicator.textContent = '';
       clearTimeout(state.turnSummaryTimer);
       state.turnSummaryTimer = null;
       dom.turnOverlay.classList.remove('show');
@@ -1186,7 +1225,7 @@
       dom.gameDistance.textContent = state.config.distance;
       dom.gameTurns.textContent = state.turnLaps.length;
       dom.trackDistance.textContent = state.config.distance;
-      dom.turnList.textContent = `Virajes en: ${getTurnListText()} · MAX 1/2/3 indica dificultad · Sprint en viraje = zona más difícil`;
+      dom.turnList.textContent = `Virajes en: ${getTurnListText()} · MAX 1/2/3 indica dificultad · Sprint (2–4) = más difícil`;
       dom.turnName.textContent = currentPlayer().name;
       dom.turnCounter.textContent = `Turno ${state.turnNumber}`;
       const reason = state.blockReason?.[currentPlayer().name];
@@ -1334,11 +1373,36 @@
 
     function handleAction(action) {
       if (state.awaiting) return;
-      const player = currentPlayer();
+      if (action === 'sprint') {
+        startSprintRoll();
+        return;
+      }
       applyAction(action);
     }
 
-    function applyAction(action) {
+    function startSprintRoll() {
+      if (state.awaiting) return;
+      state.awaiting = 'rolling';
+      let ticks = 0;
+      dom.rollIndicator.textContent = 'Sprint aleatorio: 2';
+      clearInterval(state.sprintRollTimer);
+      clearTimeout(state.sprintRollCountdown);
+      state.sprintRollTimer = setInterval(() => {
+        const roll = 2 + Math.floor(Math.random() * 3);
+        dom.rollIndicator.textContent = `Sprint aleatorio: ${roll}`;
+      }, 90);
+      state.sprintRollCountdown = setTimeout(() => {
+        clearInterval(state.sprintRollTimer);
+        state.sprintRollTimer = null;
+        const finalRoll = 2 + Math.floor(Math.random() * 3);
+        dom.rollIndicator.textContent = `Sprint aleatorio: ${finalRoll}`;
+        state.awaiting = null;
+        applyAction('sprint', finalRoll);
+        setTimeout(() => { dom.rollIndicator.textContent = ''; }, 400);
+      }, 650);
+    }
+
+    function applyAction(action, overrideAdvance = null) {
       const player = currentPlayer();
       const locked = state.blockedNext[player.name];
       if (locked && action !== 'soft') {
@@ -1358,13 +1422,17 @@
       if (!info) return;
 
       player.turns += 1;
-      let advance = info.advance;
+      let advance = overrideAdvance !== null ? overrideAdvance : info.advance;
       let cost = info.cost;
 
       const beforeProgress = player.progress;
       const energyBefore = player.energy;
       player.energy = Math.max(0, player.energy - cost);
-      logEvent(`${player.name} elige ${info.label} (+${advance} largos, -${cost} energía).`);
+      if (action === 'sprint') {
+        logEvent(`${player.name} elige Sprint aleatorio (+${advance} largos, -${cost} energía).`);
+      } else {
+        logEvent(`${player.name} elige ${info.label} (+${advance} largos, -${cost} energía).`);
+      }
 
       const eventResult = maybeEvent(player, { advance, cost });
       advance = eventResult.advance;
@@ -1375,8 +1443,8 @@
 
       player.progress = clamp(player.progress + advance, 0, state.config.distance);
       if (state.turnSummary) {
-        state.turnSummary.action = info.label;
-        state.turnSummary.baseAdvance = info.advance;
+        state.turnSummary.action = action === 'sprint' ? 'Sprint aleatorio' : info.label;
+        state.turnSummary.baseAdvance = advance;
         state.turnSummary.baseCost = info.cost;
         state.turnSummary.energyBefore = energyBefore;
         state.turnSummary.energyAfter = player.energy;
@@ -1393,7 +1461,7 @@
       let maxSpeed = null;
       if (crossedLap) {
         maxSpeed = state.turnDifficulties[crossedLap] || 2;
-        overspeed = info.advance > maxSpeed;
+        overspeed = advance > maxSpeed;
         if (overspeed) {
           logEvent(`Exceso en viraje (MAX ${maxSpeed}). Próximo turno bloqueado.`);
           if (state.turnSummary) state.turnSummary.blockedReason = `Exceso en viraje (MAX ${maxSpeed})`;
