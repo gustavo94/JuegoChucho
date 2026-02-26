@@ -134,34 +134,48 @@
     .turn-overlay {
       position: fixed;
       left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-      padding: 10px 14px;
-      border-radius: 12px;
-      background: rgba(6, 22, 36, 0.9);
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 16px 18px;
+      border-radius: 14px;
+      background: rgba(6, 22, 36, 0.95);
       border: 1px solid #1b3b55;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.55);
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 0.98rem;
       opacity: 0;
       pointer-events: none;
       display: flex;
-      gap: 12px;
-      align-items: center;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
       transition: opacity 0.2s ease, transform 0.2s ease;
       z-index: 60;
-      max-width: min(720px, 92%);
-      text-align: center;
+      width: min(680px, 92%);
+      text-align: left;
     }
 
     .turn-overlay.show {
       opacity: 1;
-      transform: translateX(-50%) translateY(-6px);
+      transform: translate(-50%, -52%);
       pointer-events: auto;
     }
 
     #turnOverlayText {
-      flex: 1;
+      display: grid;
+      gap: 6px;
+    }
+
+    .summary-line {
+      background: rgba(10, 30, 46, 0.6);
+      border: 1px solid #12314b;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .summary-actions {
+      display: flex;
+      justify-content: flex-end;
     }
 
     .player-card {
@@ -267,11 +281,11 @@
 
     .track-path.turn-texture {
       fill: none;
-      stroke: rgba(176, 226, 248, 0.32);
-      stroke-width: 3;
+      stroke: rgba(176, 226, 248, 0.22);
+      stroke-width: 2;
       stroke-linecap: round;
-      stroke-dasharray: 1 30;
-      animation: turn-dot 2.6s linear infinite;
+      stroke-dasharray: 1 48;
+      animation: turn-dot 3.4s linear infinite;
     }
 
     .track-path.turn-texture.soft {
@@ -287,7 +301,7 @@
     }
 
     @keyframes turn-dot {
-      to { stroke-dashoffset: -31; }
+      to { stroke-dashoffset: -50; }
     }
 
     .track-node {
@@ -444,6 +458,18 @@
       padding: 16px;
       display: grid;
       gap: 12px;
+    }
+
+    #eventTone {
+      font-weight: 700;
+      color: #061624;
+      background: linear-gradient(135deg, #7bff6b, #35c6c6);
+      border-color: #7bff6b;
+    }
+
+    #eventTone.bad {
+      background: linear-gradient(135deg, #ff9b6f, #ff4d6d);
+      border-color: #ff9b6f;
     }
 
     .mini-close {
@@ -612,21 +638,16 @@
             <div>
               <label for="distance">Distancia (largos)</label>
               <select id="distance">
-                <option value="6">6</option>
-                <option value="8" selected>8</option>
                 <option value="10">10</option>
-                <option value="12">12</option>
+                <option value="12" selected>12</option>
+                <option value="14">14</option>
+                <option value="16">16</option>
               </select>
             </div>
             <div>
-              <label for="turnInterval">Viraje cada (largos)</label>
-              <select id="turnInterval">
-                <option value="1">1 (cada largo)</option>
-                <option value="2" selected>2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
+              <label for="turnCount">Número de virajes</label>
+              <select id="turnCount"></select>
+              <div class="muted" id="turnIntervalHint"></div>
             </div>
             <div>
               <label for="energy">Energía inicial</label>
@@ -667,7 +688,7 @@
           <div class="row space">
             <div>
               <h2 id="game-title">Carrera</h2>
-              <div class="muted">Distancia: <span id="gameDistance">0</span> largos · Viraje cada <span id="gameInterval">0</span></div>
+              <div class="muted">Distancia: <span id="gameDistance">0</span> largos · Virajes: <span id="gameTurns">0</span></div>
             </div>
             <div class="turn-banner">Turno: <span class="turn-indicator" id="turnName">-</span></div>
           </div>
@@ -707,8 +728,10 @@
         </div>
       </div>
       <div class="turn-overlay" id="turnOverlay" role="dialog" aria-live="polite">
-        <span id="turnOverlayText"></span>
-        <button class="btn ghost" id="turnOverlayClose">Cerrar</button>
+        <div id="turnOverlayText"></div>
+        <div class="summary-actions">
+          <button class="btn ghost" id="turnOverlayClose">Cerrar</button>
+        </div>
       </div>
     </section>
 
@@ -751,18 +774,29 @@
   </div>
 
   <div class="modal" id="modal-minigame" aria-modal="true" role="dialog" aria-labelledby="minigame-title">
+      <div class="modal-content">
+        <div class="row space">
+          <h3 id="minigame-title">Viraje</h3>
+          <button class="btn ghost mini-close" id="closeMini">Esc</button>
+        </div>
+        <div class="muted">Detén el cursor dentro de la zona verde</div>
+        <div class="mini-bar" id="miniBar">
+          <div class="target" id="miniTarget"></div>
+          <div class="cursor" id="miniCursor"></div>
+        </div>
+        <button class="btn primary" id="miniStop">Detener (Enter)</button>
+        <div class="muted" id="miniFeedback"></div>
+      </div>
+    </div>
+
+  <div class="modal" id="modal-event" aria-modal="true" role="dialog" aria-labelledby="event-title">
     <div class="modal-content">
       <div class="row space">
-        <h3 id="minigame-title">Viraje</h3>
-        <button class="btn ghost mini-close" id="closeMini">Esc</button>
+        <h3 id="event-title">Evento</h3>
+        <button class="btn ghost" id="closeEvent">Cerrar</button>
       </div>
-      <div class="muted">Detén el cursor dentro de la zona verde</div>
-      <div class="mini-bar" id="miniBar">
-        <div class="target" id="miniTarget"></div>
-        <div class="cursor" id="miniCursor"></div>
-      </div>
-      <button class="btn primary" id="miniStop">Detener (Enter)</button>
-      <div class="muted" id="miniFeedback"></div>
+      <div class="tag" id="eventTone">Perfecto</div>
+      <div id="eventMessage"></div>
     </div>
   </div>
 
@@ -804,8 +838,8 @@
     const state = {
       screen: 'config',
       config: {
-        distance: 8,
-        turnInterval: 2,
+        distance: 12,
+        turnCount: 3,
         energy: 10,
         energyMax: 12,
         players: 2
@@ -814,8 +848,12 @@
       currentIndex: 0,
       log: [],
       blockedNext: {},
+      blockReason: {},
+      blockedSkip: {},
+      turnLaps: [],
       turnDifficulties: {},
       awaiting: null,
+      turnSummary: null,
       trivia: null,
       miniGame: null,
       collectingSummary: false,
@@ -875,7 +913,8 @@
         results: document.getElementById('screen-results')
       },
       distance: document.getElementById('distance'),
-      turnInterval: document.getElementById('turnInterval'),
+      turnCount: document.getElementById('turnCount'),
+      turnIntervalHint: document.getElementById('turnIntervalHint'),
       energy: document.getElementById('energy'),
       energyMax: document.getElementById('energyMax'),
       players: document.getElementById('players'),
@@ -883,7 +922,7 @@
       startGame: document.getElementById('startGame'),
       resetData: document.getElementById('resetData'),
       gameDistance: document.getElementById('gameDistance'),
-      gameInterval: document.getElementById('gameInterval'),
+      gameTurns: document.getElementById('gameTurns'),
       turnName: document.getElementById('turnName'),
       playerBoard: document.getElementById('playerBoard'),
       trackBoard: document.getElementById('trackBoard'),
@@ -909,6 +948,10 @@
       miniStop: document.getElementById('miniStop'),
       miniFeedback: document.getElementById('miniFeedback'),
       closeMini: document.getElementById('closeMini'),
+      modalEvent: document.getElementById('modal-event'),
+      closeEvent: document.getElementById('closeEvent'),
+      eventTone: document.getElementById('eventTone'),
+      eventMessage: document.getElementById('eventMessage'),
       modalHelp: document.getElementById('modal-help'),
       closeHelp: document.getElementById('closeHelp'),
       modalTutorial: document.getElementById('modal-tutorial'),
@@ -946,7 +989,7 @@
       }
       state.config.players = clamp(state.config.players || 2, 2, 4);
       dom.distance.value = state.config.distance;
-      dom.turnInterval.value = state.config.turnInterval;
+      updateTurnCounts(state.config.turnCount);
       dom.energy.value = state.config.energy;
       dom.energyMax.value = state.config.energyMax;
       dom.players.value = state.config.players;
@@ -961,6 +1004,7 @@
     }
 
     function bindEvents() {
+      dom.distance.addEventListener('change', updateTurnCounts);
       dom.players.addEventListener('change', refreshPlayerInputs);
       dom.startGame.addEventListener('click', () => newGame(readConfig()));
       dom.resetData.addEventListener('click', resetData);
@@ -978,6 +1022,7 @@
       dom.miniStop.addEventListener('click', () => stopMiniGame());
       dom.backToConfig.addEventListener('click', () => renderScreen('config'));
       dom.turnOverlayClose.addEventListener('click', () => closeTurnSummary());
+      dom.closeEvent.addEventListener('click', () => closeModal(dom.modalEvent));
       document.addEventListener('keydown', handleKeydown);
     }
 
@@ -985,6 +1030,7 @@
       if (event.key === 'Escape') {
         if (dom.modalTrivia.classList.contains('active')) skipTrivia();
         if (dom.modalMini.classList.contains('active')) return;
+        if (dom.modalEvent.classList.contains('active')) closeModal(dom.modalEvent);
         if (dom.modalHelp.classList.contains('active')) closeModal(dom.modalHelp);
         if (dom.modalTutorial.classList.contains('active')) closeTutorial();
         if (dom.turnOverlay.classList.contains('show')) closeTurnSummary();
@@ -1030,10 +1076,28 @@
       }
     }
 
+    function updateTurnCounts(preferred) {
+      const distance = parseInt(dom.distance.value, 10);
+      const minGap = 3;
+      const maxTurns = Math.max(2, Math.min(4, Math.floor(distance / minGap) - 1));
+      const counts = [];
+      for (let i = 2; i <= maxTurns; i += 1) counts.push(i);
+      dom.turnCount.innerHTML = '';
+      counts.forEach((count) => {
+        const opt = document.createElement('option');
+        opt.value = count;
+        opt.textContent = `${count} virajes`;
+        dom.turnCount.appendChild(opt);
+      });
+      const pick = preferred && counts.includes(preferred) ? preferred : counts[0];
+      dom.turnCount.value = pick;
+      dom.turnIntervalHint.textContent = `Distancias aleatorias con mínimo ${minGap} largos`;
+    }
+
     function readConfig() {
       return {
         distance: parseInt(dom.distance.value, 10),
-        turnInterval: parseInt(dom.turnInterval.value, 10),
+        turnCount: parseInt(dom.turnCount.value, 10),
         energy: parseInt(dom.energy.value, 10),
         energyMax: parseInt(dom.energyMax.value, 10),
         players: parseInt(dom.players.value, 10)
@@ -1045,9 +1109,13 @@
       state.players = [];
       state.log = [];
       state.blockedNext = {};
+      state.blockReason = {};
+      state.blockedSkip = {};
+      state.turnLaps = [];
       state.currentIndex = 0;
       state.turnNumber = 1;
       state.awaiting = null;
+      state.turnSummary = null;
       state.turnDifficulties = {};
       state.collectingSummary = false;
       state.turnSummaryLines = [];
@@ -1062,11 +1130,8 @@
         state.players.push(createPlayer(input.value.trim() || `Jugador ${i + 1}`, colors[i], icons[i], false));
       });
 
-      for (let lap = state.config.turnInterval; lap < state.config.distance; lap += state.config.turnInterval) {
-        const roll = Math.random();
-        const difficulty = roll < 0.4 ? 1 : roll < 0.75 ? 2 : 3;
-        state.turnDifficulties[lap] = difficulty;
-      }
+      state.turnLaps = generateTurnLaps(state.config.distance, state.config.turnCount);
+      state.turnDifficulties = generateTurnDifficulties(state.turnLaps);
 
       saveState();
       renderScreen('game');
@@ -1100,15 +1165,24 @@
 
     function renderGame() {
       dom.gameDistance.textContent = state.config.distance;
-      dom.gameInterval.textContent = state.config.turnInterval;
+      dom.gameTurns.textContent = state.turnLaps.length;
       dom.trackDistance.textContent = state.config.distance;
       dom.turnList.textContent = `Virajes en: ${getTurnListText()} · MAX 1/2/3 indica dificultad · Sprint en viraje = zona más difícil`;
       dom.turnName.textContent = currentPlayer().name;
       dom.turnCounter.textContent = `Turno ${state.turnNumber}`;
-      dom.blockedHint.textContent = state.blockedNext[currentPlayer().name] ? 'Bloqueado: solo Suave' : '';
+      const reason = state.blockReason?.[currentPlayer().name];
+      dom.blockedHint.textContent = state.blockedNext[currentPlayer().name] ? `Bloqueado: solo Suave. ${reason || ''}` : '';
       applyActionPanelStyle(currentPlayer());
 
       renderTrack();
+
+      if (state.blockedSkip[currentPlayer().name] && !state.awaiting) {
+        const msg = reason ? `Turno bloqueado por exceso de velocidad. ${reason}. Pierdes el turno.` : 'Turno bloqueado por exceso de velocidad. Pierdes el turno.';
+        state.blockedSkip[currentPlayer().name] = false;
+        state.blockedNext[currentPlayer().name] = false;
+        state.blockReason[currentPlayer().name] = '';
+        showTurnSummary(`<div class="summary-line">${msg}</div>`);
+      }
 
       dom.playerBoard.innerHTML = '';
       state.players.forEach((player, index) => {
@@ -1165,6 +1239,21 @@
       state.collectingSummary = true;
       state.turnSummaryLines = [];
       state.turnSummaryPlayer = player.name;
+      state.turnSummary = {
+        player: player.name,
+        action: '',
+        baseAdvance: 0,
+        baseCost: 0,
+        energyBefore: player.energy,
+        energyAfter: player.energy,
+        energySpent: 0,
+        event: '',
+        progressBefore: player.progress,
+        progressAfter: player.progress,
+        minigame: '',
+        trivia: '',
+        blockedReason: ''
+      };
     }
 
     function showTurnSummary(text) {
@@ -1172,7 +1261,7 @@
       state.awaiting = 'summary';
       const color = currentPlayer().color || '#35c6c6';
       dom.turnOverlay.style.borderColor = hexToRgba(color, 0.6);
-      dom.turnOverlayText.textContent = text;
+      dom.turnOverlayText.innerHTML = text;
       dom.turnOverlay.classList.add('show');
       state.turnSummaryTimer = setTimeout(() => {
         closeTurnSummary();
@@ -1195,10 +1284,23 @@
         return;
       }
       state.collectingSummary = false;
-      const base = state.turnSummaryLines.slice(0, 3).join(' · ');
-      const playerName = state.turnSummaryPlayer || currentPlayer().name;
-      const summary = base || `${playerName} termina su turno.`;
-      showTurnSummary(summary);
+      if (state.turnSummary) {
+        state.turnSummary.progressAfter = currentPlayer().progress;
+        const s = state.turnSummary;
+        const lines = [];
+        lines.push(`Acción: <strong>${s.action}</strong> (+${s.baseAdvance} largos)`);
+        lines.push(`Energía: ${s.energyBefore} → ${s.energyAfter} (−${s.energySpent})`);
+        if (s.event) lines.push(`Evento: ${s.event}`);
+        lines.push(`Avance total: ${s.progressBefore} → ${s.progressAfter}`);
+        if (s.minigame) lines.push(`Viraje: ${s.minigame}`);
+        if (s.trivia) lines.push(`Trivia: ${s.trivia}`);
+        if (s.blockedReason) lines.push(`Castigo: Bloqueo próximo turno (${s.blockedReason})`);
+        const summaryHtml = lines.map((l) => `<div class="summary-line">${l}</div>`).join('');
+        showTurnSummary(summaryHtml);
+      } else {
+        const playerName = state.turnSummaryPlayer || currentPlayer().name;
+        showTurnSummary(`<div class="summary-line">${playerName} termina su turno.</div>`);
+      }
     }
     function currentPlayer() {
       return state.players[state.currentIndex];
@@ -1241,28 +1343,56 @@
       let cost = info.cost;
 
       const beforeProgress = player.progress;
+      const energyBefore = player.energy;
       player.energy = Math.max(0, player.energy - cost);
       logEvent(`${player.name} elige ${info.label} (+${advance} largos, -${cost} energía).`);
 
       const eventResult = maybeEvent(player, { advance, cost });
       advance = eventResult.advance;
       cost = eventResult.cost;
+      const eventText = eventResult.eventText;
+      const eventTone = eventResult.eventTone;
+      if (eventText) showEventPopup(eventTone, eventText);
 
       player.progress = clamp(player.progress + advance, 0, state.config.distance);
-
-      if (player.energy === 0) {
-        state.blockedNext[player.name] = true;
-        logEvent(`${player.name} quedó sin energía. Próximo turno bloqueado.`);
-      } else {
-        state.blockedNext[player.name] = false;
+      if (state.turnSummary) {
+        state.turnSummary.action = info.label;
+        state.turnSummary.baseAdvance = info.advance;
+        state.turnSummary.baseCost = info.cost;
+        state.turnSummary.energyBefore = energyBefore;
+        state.turnSummary.energyAfter = player.energy;
+        state.turnSummary.energySpent = Math.max(0, energyBefore - player.energy);
+        state.turnSummary.event = eventText;
+        state.turnSummary.progressBefore = beforeProgress;
+        state.turnSummary.progressAfter = player.progress;
       }
 
-      const crossedLap = getCrossedTurnLap(beforeProgress, player.progress, state.config.turnInterval, state.config.distance);
+      const energyDepleted = player.energy === 0;
+
+      const crossedLap = getCrossedTurnLap(beforeProgress, player.progress, state.turnLaps);
+      let overspeed = false;
+      let maxSpeed = null;
       if (crossedLap) {
+        maxSpeed = state.turnDifficulties[crossedLap] || 2;
+        overspeed = info.advance > maxSpeed;
+        if (overspeed) {
+          logEvent(`Exceso en viraje (MAX ${maxSpeed}). Próximo turno bloqueado.`);
+          if (state.turnSummary) state.turnSummary.blockedReason = `Exceso en viraje (MAX ${maxSpeed})`;
+        }
         state.activeTurnLap = crossedLap;
         startTurnMiniGame(player, action);
-        return;
       }
+
+      const blocked = energyDepleted || overspeed;
+      state.blockedNext[player.name] = blocked;
+      state.blockedSkip[player.name] = overspeed;
+      state.blockReason[player.name] = overspeed ? `Exceso en viraje (MAX ${maxSpeed})` : energyDepleted ? 'Sin energía' : '';
+      if (energyDepleted) logEvent(`${player.name} quedó sin energía. Próximo turno bloqueado.`);
+      if (energyDepleted && state.turnSummary && !state.turnSummary.blockedReason) {
+        state.turnSummary.blockedReason = 'Sin energía';
+      }
+
+      if (crossedLap) return;
 
       if (action === 'sprint') {
         const opened = maybeTrivia('sprint');
@@ -1274,30 +1404,38 @@
 
     function maybeEvent(player, payload) {
       let { advance, cost } = payload;
+      let eventText = '';
+      let eventTone = 'neutral';
       const roll = Math.random();
       if (roll > 0.2) {
         logEvent('Carril limpio.');
-        return { advance, cost };
+        return { advance, cost, eventText, eventTone };
       }
       const eventPick = Math.random();
       if (eventPick < 0.33) {
         const delta = Math.random() < 0.5 ? 1 : -1;
         advance += delta;
-        logEvent(`Salida/ritmo: ${delta > 0 ? '+1' : '-1'} largo.`);
+        eventText = `Salida/ritmo: ${delta > 0 ? '+1' : '-1'} largo`;
+        eventTone = delta > 0 ? 'good' : 'bad';
+        logEvent(`${eventText}.`);
       } else if (eventPick < 0.66) {
         if (cost > 0) {
           cost += 1;
           player.energy = Math.max(0, player.energy - 1);
-          logEvent('Turbulencia: +1 costo de energía.');
+          eventText = 'Turbulencia: +1 energía';
+          eventTone = 'bad';
+          logEvent(`${eventText}.`);
         } else {
           advance -= 1;
-          logEvent('Turbulencia: -1 largo.');
+          eventText = 'Turbulencia: -1 largo';
+          eventTone = 'bad';
+          logEvent(`${eventText}.`);
         }
       } else {
         logEvent('Carril limpio.');
       }
       advance = clamp(advance, 0, state.config.distance - player.progress);
-      return { advance, cost };
+      return { advance, cost, eventText, eventTone };
     }
 
     function crossedTurn(before, after, interval) {
@@ -1382,10 +1520,12 @@
         player.progress = clamp(player.progress + 1, 0, state.config.distance);
         logEvent(`Viraje exitoso: ${player.name} gana +1 largo y opción de trivia.`);
         dom.miniFeedback.textContent = '¡Perfecto! +1 largo y trivia.';
+        if (state.turnSummary) state.turnSummary.minigame = 'Éxito (+1 largo)';
       } else {
         player.progress = clamp(player.progress - 1, 0, state.config.distance);
         logEvent(`Viraje fallido: ${player.name} pierde 1 largo.`);
         dom.miniFeedback.textContent = 'Fallo: -1 largo.';
+        if (state.turnSummary) state.turnSummary.minigame = 'Fallo (-1 largo)';
       }
       closeModal(dom.modalMini);
       state.awaiting = null;
@@ -1424,9 +1564,15 @@
         player.energy = Math.min(state.config.energyMax, player.energy + 1);
         logEvent(`Trivia correcta: ${player.name} recupera +1 energía.`);
         dom.triviaFeedback.textContent = 'Correcto: +1 energía.';
+        if (state.turnSummary) {
+          state.turnSummary.trivia = 'Correcto (+1 energía)';
+          state.turnSummary.energyAfter = player.energy;
+          state.turnSummary.energySpent = Math.max(0, state.turnSummary.energyBefore - player.energy);
+        }
       } else {
         logEvent(`Trivia fallida por ${player.name}.`);
         dom.triviaFeedback.textContent = 'Incorrecto. Sin castigo.';
+        if (state.turnSummary) state.turnSummary.trivia = 'Incorrecto';
       }
       state.trivia = null;
       setTimeout(() => {
@@ -1444,6 +1590,7 @@
         return;
       }
       logEvent(`${currentPlayer().name} cerró la trivia.`);
+      if (state.turnSummary) state.turnSummary.trivia = 'Omitida';
       state.trivia = null;
       closeModal(dom.modalTrivia);
       state.awaiting = null;
@@ -1537,23 +1684,29 @@
       modal.classList.remove('active');
     }
 
+    function showEventPopup(tone, message) {
+      dom.eventTone.textContent = tone === 'good' ? 'Perfecto' : tone === 'bad' ? 'Ups' : 'Evento';
+      dom.eventTone.classList.toggle('bad', tone === 'bad');
+      dom.eventMessage.textContent = message;
+      openModal(dom.modalEvent);
+      setTimeout(() => closeModal(dom.modalEvent), 1200);
+    }
+
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
 
-    function getNextTurnLap(progress, interval, distance) {
-      if (progress >= distance) return null;
-      const next = Math.ceil((progress + 1) / interval) * interval;
-      if (next >= distance) return null;
-      return next;
+    function getNextTurnLap(progress, turnLaps) {
+      for (let i = 0; i < turnLaps.length; i += 1) {
+        if (turnLaps[i] > progress) return turnLaps[i];
+      }
+      return null;
     }
 
-    function getCrossedTurnLap(before, after, interval, distance) {
-      const beforeBlock = Math.floor(before / interval);
-      const afterBlock = Math.floor(after / interval);
-      if (afterBlock > beforeBlock) {
-        const lap = (beforeBlock + 1) * interval;
-        return lap < distance ? lap : null;
+    function getCrossedTurnLap(before, after, turnLaps) {
+      for (let i = 0; i < turnLaps.length; i += 1) {
+        const lap = turnLaps[i];
+        if (before < lap && after >= lap) return lap;
       }
       return null;
     }
@@ -1576,18 +1729,42 @@
     }
 
     function getTurnListText() {
-      const interval = state.config.turnInterval;
-      const distance = state.config.distance;
-      const laps = [];
-      for (let i = interval; i < distance; i += interval) {
-        const diff = state.turnDifficulties[i] || 2;
-        laps.push(`${i}(MAX${diff})`);
-      }
-      return laps.length ? laps.join(', ') : '—';
+      const laps = state.turnLaps;
+      const parts = laps.map((lap) => `${lap}(MAX${state.turnDifficulties[lap] || 2})`);
+      return parts.length ? parts.join(', ') : '—';
     }
 
-    function buildTrackLayout(distance, interval) {
-      const rows = Math.max(1, Math.ceil(distance / interval));
+    function generateTurnDifficulties(turnLaps) {
+      const pattern = [1, 2, 3, 2];
+      const difficulties = {};
+      turnLaps.forEach((lap, idx) => {
+        difficulties[lap] = pattern[idx % pattern.length];
+      });
+      return difficulties;
+    }
+
+    function generateTurnLaps(distance, turnCount) {
+      const minGap = 3;
+      const segments = turnCount + 1;
+      let minSeg = minGap;
+      if (segments * minSeg > distance) minSeg = 2;
+      let remaining = distance - segments * minSeg;
+      if (remaining < 0) remaining = 0;
+      const segs = Array(segments).fill(minSeg);
+      for (let i = 0; i < remaining; i += 1) {
+        segs[Math.floor(Math.random() * segments)] += 1;
+      }
+      const laps = [];
+      let acc = 0;
+      for (let i = 0; i < segments - 1; i += 1) {
+        acc += segs[i];
+        if (acc < distance) laps.push(acc);
+      }
+      return laps;
+    }
+
+    function buildTrackLayout(distance, turnLaps) {
+      const rows = Math.max(1, turnLaps.length + 1);
       const xLeft = 14;
       const xRight = 86;
       const yTop = 12;
@@ -1602,7 +1779,9 @@
       let d = '';
       for (let row = 0; row < rows; row += 1) {
         const dirRight = row % 2 === 0;
-        const segLen = row === rows - 1 ? distance - interval * (rows - 1) : interval;
+        const prevLap = row === 0 ? 0 : turnLaps[row - 1];
+        const nextLap = row < turnLaps.length ? turnLaps[row] : distance;
+        const segLen = Math.max(1, nextLap - prevLap);
         const count = Math.max(1, segLen);
         const xStart = dirRight ? xLeft + gap : xRight - gap;
         const xEnd = dirRight ? xRight - gap : xLeft + gap;
@@ -1621,8 +1800,8 @@
           const ctrlX = dirRight ? xRight + curveOut : xLeft - curveOut;
           const curvePath = `M ${xEnd} ${y} C ${ctrlX} ${y} ${ctrlX} ${nextY} ${xEnd} ${nextY}`;
           d += ` C ${ctrlX} ${y} ${ctrlX} ${nextY} ${xEnd} ${nextY}`;
-          const lapAtEnd = (row + 1) * interval;
-          if (lapAtEnd < distance) {
+          const lapAtEnd = turnLaps[row];
+          if (lapAtEnd && lapAtEnd < distance) {
             const midX = xEnd * 0.25 + ctrlX * 0.75;
             const midYCurve = (y + nextY) / 2;
             curveMids.push({ lap: lapAtEnd, x: midX, y: midYCurve });
@@ -1632,9 +1811,12 @@
       }
       if (d) curveSegments.unshift({ lap: null, path: d, dirRight: true });
 
+      const startPos = { x: (xLeft + gap) - 6, y: yBottom };
+      positions.unshift(startPos);
+
       curveMids.forEach((entry) => {
-        if (entry.lap > 0 && entry.lap <= positions.length) {
-          positions[entry.lap - 1] = { x: entry.x, y: entry.y };
+        if (entry.lap > 0 && entry.lap < positions.length) {
+          positions[entry.lap] = { x: entry.x, y: entry.y };
         }
       });
 
@@ -1643,12 +1825,11 @@
 
     function renderTrack() {
       const distance = state.config.distance;
-      const interval = state.config.turnInterval;
       const track = dom.trackBoard;
       track.innerHTML = '';
-      const layout = buildTrackLayout(distance, interval);
+      const layout = buildTrackLayout(distance, state.turnLaps);
       const positions = layout.positions;
-      const currentNextTurn = getNextTurnLap(currentPlayer().progress, interval, distance);
+      const currentNextTurn = getNextTurnLap(currentPlayer().progress, state.turnLaps);
       const height = layout.rows <= 4 ? 420 : Math.min(700, 280 + layout.rows * 30);
       track.style.height = `${height}px`;
 
@@ -1679,12 +1860,12 @@
 
       track.appendChild(svg);
 
-      positions.forEach((pos, index) => {
-        const lap = index + 1;
+      for (let lap = 1; lap <= distance; lap += 1) {
+        const pos = positions[lap];
         const node = document.createElement('div');
         node.className = 'track-node';
         let diff = null;
-        if (lap % interval === 0 && lap < distance) {
+        if (state.turnLaps.includes(lap)) {
           diff = state.turnDifficulties[lap] || 2;
           node.classList.add('turn', `diff-${diff}`);
         }
@@ -1695,18 +1876,19 @@
         node.style.top = `${pos.y}%`;
         track.appendChild(node);
 
-        if (lap % interval === 0 && lap < distance) {
+        if (state.turnLaps.includes(lap)) {
           const limit = document.createElement('div');
           limit.className = 'turn-limit';
           limit.classList.add(`diff-${diff || 2}`);
           limit.textContent = `MAX ${diff}`;
-          const offsetX = lap % (interval * 2) === 0 ? -18 : 18;
+          const idx = state.turnLaps.indexOf(lap);
+          const offsetX = idx % 2 === 0 ? -18 : 18;
           const offsetY = -26;
           limit.style.left = `calc(${pos.x}% + ${offsetX}px)`;
           limit.style.top = `calc(${pos.y}% + ${offsetY}px)`;
           track.appendChild(limit);
         }
-      });
+      }
 
       const startLabel = document.createElement('div');
       startLabel.className = 'track-label';
@@ -1718,19 +1900,19 @@
       const finishLabel = document.createElement('div');
       finishLabel.className = 'track-label finish';
       finishLabel.textContent = 'Meta';
-      finishLabel.style.left = `${positions[positions.length - 1].x}%`;
-      finishLabel.style.top = `${positions[positions.length - 1].y + 6}%`;
+      finishLabel.style.left = `${positions[distance].x}%`;
+      finishLabel.style.top = `${positions[distance].y + 6}%`;
       track.appendChild(finishLabel);
 
       const grouped = {};
       state.players.forEach((player) => {
-        const lap = Math.max(1, Math.min(distance, player.progress || 1));
+        const lap = clamp(player.progress, 0, distance);
         if (!grouped[lap]) grouped[lap] = [];
         grouped[lap].push(player);
       });
 
       Object.keys(grouped).forEach((lapKey) => {
-        const lapIndex = parseInt(lapKey, 10) - 1;
+        const lapIndex = parseInt(lapKey, 10);
         const pos = positions[lapIndex];
         const players = grouped[lapKey];
         players.forEach((player, idx) => {
