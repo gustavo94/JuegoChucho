@@ -136,7 +136,7 @@
       left: 50%;
       bottom: 24px;
       transform: translateX(-50%);
-      padding: 10px 16px;
+      padding: 10px 14px;
       border-radius: 12px;
       background: rgba(6, 22, 36, 0.9);
       border: 1px solid #1b3b55;
@@ -145,8 +145,11 @@
       font-size: 0.95rem;
       opacity: 0;
       pointer-events: none;
+      display: flex;
+      gap: 12px;
+      align-items: center;
       transition: opacity 0.2s ease, transform 0.2s ease;
-      z-index: 50;
+      z-index: 60;
       max-width: min(720px, 92%);
       text-align: center;
     }
@@ -154,6 +157,11 @@
     .turn-overlay.show {
       opacity: 1;
       transform: translateX(-50%) translateY(-6px);
+      pointer-events: auto;
+    }
+
+    #turnOverlayText {
+      flex: 1;
     }
 
     .player-card {
@@ -234,16 +242,16 @@
 
     .track-svg {
       position: absolute;
-      inset: 18px;
-      width: calc(100% - 36px);
-      height: calc(100% - 36px);
+      inset: 28px;
+      width: calc(100% - 56px);
+      height: calc(100% - 56px);
       z-index: 1;
     }
 
     .track-path.edge {
       fill: none;
       stroke: #0c2f48;
-      stroke-width: 22;
+      stroke-width: 20;
       stroke-linecap: round;
       stroke-linejoin: round;
       opacity: 0.9;
@@ -252,9 +260,34 @@
     .track-path.outer {
       fill: none;
       stroke: #071e30;
-      stroke-width: 16;
+      stroke-width: 14;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+
+    .track-path.turn-texture {
+      fill: none;
+      stroke: rgba(176, 226, 248, 0.32);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 1 30;
+      animation: turn-dot 2.6s linear infinite;
+    }
+
+    .track-path.turn-texture.soft {
+      stroke: rgba(120, 210, 235, 0.28);
+    }
+
+    .track-path.turn-texture.medium {
+      stroke: rgba(120, 220, 255, 0.36);
+    }
+
+    .track-path.turn-texture.hard {
+      stroke: rgba(160, 230, 255, 0.46);
+    }
+
+    @keyframes turn-dot {
+      to { stroke-dashoffset: -31; }
     }
 
     .track-node {
@@ -270,7 +303,7 @@
       align-items: center;
       justify-content: center;
       transform: translate(-50%, -50%);
-      z-index: 3;
+      z-index: 9;
     }
 
     .track-node.turn {
@@ -300,6 +333,50 @@
       color: #bfffd6;
     }
 
+    .track-node.turn.diff-1 {
+      border-color: #6fe6b8;
+      box-shadow: inset 0 0 0 2px #6fe6b8;
+    }
+
+    .track-node.turn.diff-2 {
+      border-color: #6cc6ff;
+      box-shadow: inset 0 0 0 2px #6cc6ff;
+    }
+
+    .track-node.turn.diff-3 {
+      border-color: #ff9b6f;
+      box-shadow: inset 0 0 0 2px #ff9b6f;
+    }
+
+    .turn-limit {
+      position: absolute;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      background: rgba(6, 22, 36, 0.9);
+      border: 1px dashed rgba(255, 191, 102, 0.9);
+      color: #ffbf66;
+      transform: translate(-50%, -50%);
+      z-index: 7;
+    }
+
+    .turn-limit.diff-1 {
+      border-color: rgba(110, 230, 184, 0.9);
+      color: #6fe6b8;
+    }
+
+    .turn-limit.diff-2 {
+      border-color: rgba(108, 198, 255, 0.9);
+      color: #6cc6ff;
+    }
+
+    .turn-limit.diff-3 {
+      border-color: rgba(255, 155, 111, 0.9);
+      color: #ff9b6f;
+    }
+
     .track-marker {
       position: absolute;
       width: 30px;
@@ -314,7 +391,7 @@
       color: #061624;
       transform: translate(-50%, -50%);
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-      z-index: 4;
+      z-index: 10;
     }
 
     .track-marker.current {
@@ -330,7 +407,7 @@
       color: var(--text);
       font-size: 0.75rem;
       transform: translate(-50%, -50%);
-      z-index: 4;
+      z-index: 11;
     }
 
     .track-label.finish {
@@ -367,6 +444,10 @@
       padding: 16px;
       display: grid;
       gap: 12px;
+    }
+
+    .mini-close {
+      display: none;
     }
 
     .tag {
@@ -625,7 +706,10 @@
           <div class="log" id="log"></div>
         </div>
       </div>
-      <div class="turn-overlay" id="turnOverlay" role="status" aria-live="polite"></div>
+      <div class="turn-overlay" id="turnOverlay" role="dialog" aria-live="polite">
+        <span id="turnOverlayText"></span>
+        <button class="btn ghost" id="turnOverlayClose">Cerrar</button>
+      </div>
     </section>
 
     <section class="screen" id="screen-results" aria-labelledby="results-title">
@@ -670,7 +754,7 @@
     <div class="modal-content">
       <div class="row space">
         <h3 id="minigame-title">Viraje</h3>
-        <button class="btn ghost" id="closeMini">Esc</button>
+        <button class="btn ghost mini-close" id="closeMini">Esc</button>
       </div>
       <div class="muted">Detén el cursor dentro de la zona verde</div>
       <div class="mini-bar" id="miniBar">
@@ -689,7 +773,7 @@
         <button class="btn ghost" id="closeHelp">Esc</button>
       </div>
       <div class="help">
-        Elige acción para avanzar. El turno avanza automáticamente tras un breve resumen. Todos los jugadores están en la misma pista azul. El Sprint puede activar trivia. Cruzar un viraje abre mini-juego; acertar suma +1 largo, fallar resta -1. Gana quien llegue primero a la meta.
+        Elige acción para avanzar. El turno avanza automáticamente tras un breve resumen. Todos los jugadores están en la misma pista azul. En virajes verás MAX 1/2/3 (dificultad); Sprint = curva más difícil. El Sprint puede activar trivia. Cruzar un viraje abre mini-juego; acertar suma +1 largo, fallar resta -1. Gana quien llegue primero a la meta.
       </div>
     </div>
   </div>
@@ -706,6 +790,7 @@
         <li>Tras la acción verás un resumen y el turno avanza automáticamente.</li>
         <li>La energía baja con Fuerte y Sprint. Si llega a 0, quedas bloqueado (solo Suave).</li>
         <li>Todos comparten la misma pista. Los virajes están marcados (borde azul); el próximo viraje del turno actual se resalta en amarillo.</li>
+        <li>En virajes verás MAX 1/2/3 (dificultad). Sprint hace la zona más difícil.</li>
         <li>Al cruzar un viraje aparece el mini-juego: detén el cursor en la zona verde.</li>
         <li>Si aciertas el viraje: +1 largo y trivia. Si fallas: -1 largo.</li>
         <li>Los Sprint pueden abrir trivia; si aciertas, ganas +1 energía (hasta el máximo).</li>
@@ -729,6 +814,7 @@
       currentIndex: 0,
       log: [],
       blockedNext: {},
+      turnDifficulties: {},
       awaiting: null,
       trivia: null,
       miniGame: null,
@@ -741,7 +827,7 @@
       history: []
     };
 
-    const colors = ['#35c6c6', '#1aa0ff', '#ff7b6b', '#ffd166'];
+    const colors = ['#00e5ff', '#ff4d6d', '#ffd166', '#7bff6b'];
     const icons = ['🏊', '🏊‍♀️', '🤿', '🐬'];
 
     const questions = [
@@ -834,7 +920,9 @@
       resultsList: document.getElementById('resultsList'),
       historyList: document.getElementById('historyList'),
       backToConfig: document.getElementById('backToConfig'),
-      turnOverlay: document.getElementById('turnOverlay')
+      turnOverlay: document.getElementById('turnOverlay'),
+      turnOverlayText: document.getElementById('turnOverlayText'),
+      turnOverlayClose: document.getElementById('turnOverlayClose')
     };
 
     function init() {
@@ -885,20 +973,21 @@
       dom.openTutorial.addEventListener('click', () => openTutorial());
       dom.closeHelp.addEventListener('click', () => closeModal(dom.modalHelp));
       dom.closeTrivia.addEventListener('click', () => skipTrivia());
-      dom.closeMini.addEventListener('click', () => stopMiniGame());
       dom.closeTutorial.addEventListener('click', () => closeTutorial());
       dom.tutorialDone.addEventListener('click', () => closeTutorial());
       dom.miniStop.addEventListener('click', () => stopMiniGame());
       dom.backToConfig.addEventListener('click', () => renderScreen('config'));
+      dom.turnOverlayClose.addEventListener('click', () => closeTurnSummary());
       document.addEventListener('keydown', handleKeydown);
     }
 
     function handleKeydown(event) {
       if (event.key === 'Escape') {
         if (dom.modalTrivia.classList.contains('active')) skipTrivia();
-        if (dom.modalMini.classList.contains('active')) stopMiniGame();
+        if (dom.modalMini.classList.contains('active')) return;
         if (dom.modalHelp.classList.contains('active')) closeModal(dom.modalHelp);
         if (dom.modalTutorial.classList.contains('active')) closeTutorial();
+        if (dom.turnOverlay.classList.contains('show')) closeTurnSummary();
       }
       if (dom.modalTutorial.classList.contains('active')) {
         if (event.key === 'Enter') {
@@ -959,9 +1048,11 @@
       state.currentIndex = 0;
       state.turnNumber = 1;
       state.awaiting = null;
+      state.turnDifficulties = {};
       state.collectingSummary = false;
       state.turnSummaryLines = [];
       state.turnSummaryPlayer = null;
+      state.activeTurnLap = null;
       clearTimeout(state.turnSummaryTimer);
       state.turnSummaryTimer = null;
       dom.turnOverlay.classList.remove('show');
@@ -970,6 +1061,12 @@
       nameInputs.forEach((input, i) => {
         state.players.push(createPlayer(input.value.trim() || `Jugador ${i + 1}`, colors[i], icons[i], false));
       });
+
+      for (let lap = state.config.turnInterval; lap < state.config.distance; lap += state.config.turnInterval) {
+        const roll = Math.random();
+        const difficulty = roll < 0.4 ? 1 : roll < 0.75 ? 2 : 3;
+        state.turnDifficulties[lap] = difficulty;
+      }
 
       saveState();
       renderScreen('game');
@@ -1005,7 +1102,7 @@
       dom.gameDistance.textContent = state.config.distance;
       dom.gameInterval.textContent = state.config.turnInterval;
       dom.trackDistance.textContent = state.config.distance;
-      dom.turnList.textContent = `Virajes en: ${getTurnListText()}`;
+      dom.turnList.textContent = `Virajes en: ${getTurnListText()} · MAX 1/2/3 indica dificultad · Sprint en viraje = zona más difícil`;
       dom.turnName.textContent = currentPlayer().name;
       dom.turnCounter.textContent = `Turno ${state.turnNumber}`;
       dom.blockedHint.textContent = state.blockedNext[currentPlayer().name] ? 'Bloqueado: solo Suave' : '';
@@ -1075,13 +1172,20 @@
       state.awaiting = 'summary';
       const color = currentPlayer().color || '#35c6c6';
       dom.turnOverlay.style.borderColor = hexToRgba(color, 0.6);
-      dom.turnOverlay.textContent = text;
+      dom.turnOverlayText.textContent = text;
       dom.turnOverlay.classList.add('show');
       state.turnSummaryTimer = setTimeout(() => {
-        dom.turnOverlay.classList.remove('show');
-        state.awaiting = null;
-        nextTurn();
-      }, 1100);
+        closeTurnSummary();
+      }, 15000);
+    }
+
+    function closeTurnSummary() {
+      if (!dom.turnOverlay.classList.contains('show')) return;
+      dom.turnOverlay.classList.remove('show');
+      state.awaiting = null;
+      clearTimeout(state.turnSummaryTimer);
+      state.turnSummaryTimer = null;
+      nextTurn();
     }
 
     function finishTurn() {
@@ -1155,6 +1259,7 @@
 
       const crossedLap = getCrossedTurnLap(beforeProgress, player.progress, state.config.turnInterval, state.config.distance);
       if (crossedLap) {
+        state.activeTurnLap = crossedLap;
         startTurnMiniGame(player, action);
         return;
       }
@@ -1204,9 +1309,25 @@
     function startTurnMiniGame(player, action) {
       state.awaiting = 'minigame';
       openModal(dom.modalMini);
-      dom.miniFeedback.textContent = '';
+      const activeLap = state.activeTurnLap || null;
+      const turnDiff = activeLap ? (state.turnDifficulties[activeLap] || 2) : 2;
+      const diffLabel = turnDiff === 1 ? 'suave' : turnDiff === 2 ? 'media' : 'cerrada';
+      dom.miniFeedback.textContent = `Curva ${diffLabel}. ${action === 'sprint' ? 'Sprint = zona más pequeña.' : ''}`;
 
-      const targetWidth = 30;
+      const difficultyMap = {
+        1: { width: 34, speed: 0.17 },
+        2: { width: 28, speed: 0.2 },
+        3: { width: 24, speed: 0.22 }
+      };
+      const base = difficultyMap[turnDiff] || difficultyMap[2];
+      let targetWidth = base.width;
+      let finalSpeed = base.speed;
+      if (action === 'sprint') {
+        targetWidth = Math.max(16, targetWidth - 4);
+        finalSpeed += 0.03;
+      } else if (action === 'strong') {
+        finalSpeed += 0.01;
+      }
       const targetStart = 20 + Math.random() * 40;
       dom.miniTarget.style.left = `${targetStart}%`;
       dom.miniTarget.style.width = `${targetWidth}%`;
@@ -1227,7 +1348,7 @@
       const step = (time) => {
         if (!state.miniGame || !state.miniGame.active) return;
         const elapsed = time - startTime;
-        const speed = 0.18; // percent per ms
+        const speed = finalSpeed || 0.18;
         cursor += speed * direction * (time - (state.miniGame.lastTime || time));
         if (cursor >= 100) {
           cursor = 100;
@@ -1241,10 +1362,6 @@
         state.miniGame.cursor = cursor;
         state.miniGame.direction = direction;
         dom.miniCursor.style.left = `${cursor}%`;
-        if (elapsed > 2600) {
-          stopMiniGame();
-          return;
-        }
         state.miniGame.timer = requestAnimationFrame(step);
       };
       state.miniGame.timer = requestAnimationFrame(step);
@@ -1276,6 +1393,7 @@
         const opened = maybeTrivia('turn');
         if (opened) return;
       }
+      state.activeTurnLap = null;
       finishTurn();
     }
 
@@ -1462,24 +1580,26 @@
       const distance = state.config.distance;
       const laps = [];
       for (let i = interval; i < distance; i += interval) {
-        laps.push(i);
+        const diff = state.turnDifficulties[i] || 2;
+        laps.push(`${i}(MAX${diff})`);
       }
       return laps.length ? laps.join(', ') : '—';
     }
 
     function buildTrackLayout(distance, interval) {
       const rows = Math.max(1, Math.ceil(distance / interval));
-      const xLeft = 8;
-      const xRight = 92;
-      const yTop = 8;
-      const yBottom = 92;
+      const xLeft = 14;
+      const xRight = 86;
+      const yTop = 12;
+      const yBottom = 88;
       const rowSpacing = rows > 1 ? (yBottom - yTop) / (rows - 1) : 0;
       const gap = 4;
-      const curveOut = 7;
+      const curveOut = 3.5;
       const positions = [];
-      const segments = [];
+      const curveSegments = [];
       const curveMids = [];
 
+      let d = '';
       for (let row = 0; row < rows; row += 1) {
         const dirRight = row % 2 === 0;
         const segLen = row === rows - 1 ? distance - interval * (rows - 1) : interval;
@@ -1494,20 +1614,23 @@
           positions.push({ x, y });
         }
 
-        segments.push(`M ${xStart} ${y} L ${xEnd} ${y}`);
+        if (row === 0) d = `M ${xStart} ${y}`;
+        d += ` L ${xEnd} ${y}`;
         if (row < rows - 1) {
           const nextY = yBottom - (row + 1) * rowSpacing;
           const ctrlX = dirRight ? xRight + curveOut : xLeft - curveOut;
-          const midY = (y + nextY) / 2;
-          const gapY = Math.min(6, Math.abs(nextY - y) * 0.2);
-          const curveEndY = nextY + gapY;
-          segments.push(`M ${xEnd} ${y} Q ${ctrlX} ${midY} ${xEnd} ${curveEndY}`);
+          const curvePath = `M ${xEnd} ${y} C ${ctrlX} ${y} ${ctrlX} ${nextY} ${xEnd} ${nextY}`;
+          d += ` C ${ctrlX} ${y} ${ctrlX} ${nextY} ${xEnd} ${nextY}`;
           const lapAtEnd = (row + 1) * interval;
-          const midX = xEnd + 0.5 * (ctrlX - xEnd);
-          const midYCurve = 0.25 * y + 0.5 * midY + 0.25 * curveEndY;
-          curveMids.push({ lap: lapAtEnd, x: midX, y: midYCurve });
+          if (lapAtEnd < distance) {
+            const midX = xEnd * 0.25 + ctrlX * 0.75;
+            const midYCurve = (y + nextY) / 2;
+            curveMids.push({ lap: lapAtEnd, x: midX, y: midYCurve });
+            curveSegments.push({ lap: lapAtEnd, path: curvePath, dirRight });
+          }
         }
       }
+      if (d) curveSegments.unshift({ lap: null, path: d, dirRight: true });
 
       curveMids.forEach((entry) => {
         if (entry.lap > 0 && entry.lap <= positions.length) {
@@ -1515,7 +1638,7 @@
         }
       });
 
-      return { positions, path: segments.join(' '), rows };
+      return { positions, path: d, rows, curveSegments };
     }
 
     function renderTrack() {
@@ -1526,7 +1649,7 @@
       const layout = buildTrackLayout(distance, interval);
       const positions = layout.positions;
       const currentNextTurn = getNextTurnLap(currentPlayer().progress, interval, distance);
-      const height = layout.rows <= 4 ? 380 : Math.min(640, 260 + layout.rows * 28);
+      const height = layout.rows <= 4 ? 420 : Math.min(700, 280 + layout.rows * 30);
       track.style.height = `${height}px`;
 
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1544,19 +1667,45 @@
       outer.setAttribute('d', layout.path);
       svg.appendChild(outer);
 
+      layout.curveSegments
+        .filter((seg) => seg.lap)
+        .forEach((seg) => {
+          const diff = state.turnDifficulties[seg.lap] || 2;
+          const texture = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          texture.classList.add('track-path', 'turn-texture', diff === 1 ? 'soft' : diff === 2 ? 'medium' : 'hard');
+          texture.setAttribute('d', seg.path);
+          svg.appendChild(texture);
+        });
+
       track.appendChild(svg);
 
       positions.forEach((pos, index) => {
         const lap = index + 1;
         const node = document.createElement('div');
         node.className = 'track-node';
-        if (lap % interval === 0 && lap < distance) node.classList.add('turn');
+        let diff = null;
+        if (lap % interval === 0 && lap < distance) {
+          diff = state.turnDifficulties[lap] || 2;
+          node.classList.add('turn', `diff-${diff}`);
+        }
         if (currentNextTurn && lap === currentNextTurn) node.classList.add('next-turn');
         if (lap === distance) node.classList.add('finish');
         node.textContent = lap;
         node.style.left = `${pos.x}%`;
         node.style.top = `${pos.y}%`;
         track.appendChild(node);
+
+        if (lap % interval === 0 && lap < distance) {
+          const limit = document.createElement('div');
+          limit.className = 'turn-limit';
+          limit.classList.add(`diff-${diff || 2}`);
+          limit.textContent = `MAX ${diff}`;
+          const offsetX = lap % (interval * 2) === 0 ? -18 : 18;
+          const offsetY = -26;
+          limit.style.left = `calc(${pos.x}% + ${offsetX}px)`;
+          limit.style.top = `calc(${pos.y}% + ${offsetY}px)`;
+          track.appendChild(limit);
+        }
       });
 
       const startLabel = document.createElement('div');
